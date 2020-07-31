@@ -1,0 +1,41 @@
+version: '2.2'
+services:
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.8.0
+    environment:
+      - node.name=es
+      - cluster.name=elasticsearch-101
+      - cluster.initial_master_nodes=es
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - data:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - elastic
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana-oss:7.8.0
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_URL: http://es:9200
+      ELASTICSEARCH_HOSTS: http://es:9200
+      telemetry.enabled: 'false'
+    networks:
+      - elastic
+    depends_on:
+      - es
+
+volumes:
+  data:
+    driver: local
+
+networks:
+  elastic:
+    driver: bridge

@@ -1,0 +1,72 @@
+# Make sure all is well
+GET /_cluster/health
+# Quick overview of indices
+GET _cat/indices?v
+
+# Create shakespeare index (already done in import script)
+PUT shakespeare
+{"settings":{"number_of_shards":3,"number_of_replicas":0},"mappings":{"properties":{"speaker":{"type":"keyword"},"play_name":{"type":"keyword"},"line_id":{"type":"integer"},"speech_number":{"type":"integer"},"text_entry":{"type":"text"}}}}
+
+
+
+# Basic search
+GET shakespeare/_search
+GET shakespeare/_search?q=to be or not to be
+GET shakespeare/_search?q=help&size=100
+
+
+# Query DSL
+POST shakespeare/_search
+{"query":{"match_all":{}},"size":1}
+
+
+# Mappings
+PUT mapping_example
+GET mapping_example/_mapping
+
+POST mapping_example/_doc
+{"text":"some text","number":1}
+
+POST mapping_example/_doc
+{"text":"some more text","number":2}
+
+POST mapping_example/_doc
+{"text":"no wait","number":"three"}
+
+
+# Analyzing text
+POST _analyze
+{"text":["The quick brown fox jumped over the lazy dog."],"tokenizer":"standard","filter":[]}
+
+
+PUT analyze_example
+{"settings":{"analysis":{"filter":{"my_synonym":{"type":"synonym","synonyms":["quick, fast","fox, animal","dog, animal"]},"my_ngram":{"type":"ngram","min_gram":3,"max_gram":3},"my_edge_ngram":{"type":"edge_ngram","min_gram":1,"max_gram":6}},"analyzer":{"my_analyzer":{"tokenizer":"standard","filter":["lowercase","my_synonym","stop","stemmer"]},"partial":{"tokenizer":"standard","filter":["lowercase","my_ngram"]},"partial_edge":{"tokenizer":"standard","filter":["lowercase","my_edge_ngram"]}}}},"mappings":{"properties":{"input":{"type":"text","fields":{"fulltext":{"type":"text","analyzer":"my_analyzer"},"partial":{"type":"text","analyzer":"partial"},"partial_edge":{"type":"text","analyzer":"partial_edge"}}}}}}
+
+POST analyze_example/_analyze
+{"text":["The quick brown fox jumped over the lazy dog."],"field":"input.fulltext"}
+
+POST analyze_example/_doc
+{"input":"difficult"}
+POST analyze_example/_doc
+{"input":"different"}
+
+
+
+# Querying
+POST shakespeare/_search
+{"size":3,"query":{"bool":{"should":[{"match":{"text_entry":"hamlet"}}]}}}
+
+
+
+# Reindex
+POST _reindex
+{"source":{"index":"analyze_example"},"dest":{"index":"more_examples"}}
+
+GET more_examples/_search
+
+# Index Aliasing
+POST _aliases
+{"actions":[{"add":{"index":"analyze_example","alias":"default_index"}}]}
+
+GET default_index/_search
+
